@@ -18,7 +18,7 @@ jobs:
           ref: main
           fetch-depth: 0
           submodules: recursive
-          token: ${{ github.token }}
+          token: ${{ secrets.AREA_PUSH_TOKEN }}
 
       - name: Configure git
         run: |
@@ -44,6 +44,9 @@ jobs:
       - name: Push commit
         if: env.NO_CHANGES != '1'
         run: git push origin HEAD
+        env:
+          GIT_ASKPASS: /bin/echo
+          GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
 
       - name: Create and push next semver tag (patch)
         if: env.NO_CHANGES != '1'
@@ -67,3 +70,6 @@ jobs:
           echo "Tagging $NEXT"
           git tag -a "$NEXT" -m "Submodules updated -> $NEXT"
           git push origin "$NEXT"
+        env:
+          GIT_ASKPASS: /bin/echo
+          GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
