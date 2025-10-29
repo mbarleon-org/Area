@@ -1,7 +1,6 @@
 name: Update submodules and tag
 on:
-  repository_dispatch:
-    types: [submodule-updated]
+  workflow_call: {}
   workflow_dispatch: {}
 
 permissions:
