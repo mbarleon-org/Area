@@ -19,7 +19,7 @@ RUN npm install --no-audit --prefer-offline || npm install
 COPY external/Frontend/ .
 RUN npm run build
 
-FROM alpine:3.18 AS final
+FROM alpine:3.22 AS final
 RUN apk add --no-cache nginx bash curl ca-certificates
 
 LABEL org.opencontainers.image.title="area" \
