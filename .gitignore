@@ -47,3 +47,4 @@ tiled/
 temp/
 .DS_Store
 !CODEOWNERS
+!Dockerfile
