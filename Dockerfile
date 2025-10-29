@@ -50,7 +50,7 @@ http {
    keepalive_timeout 65;
 
    server {
-      listen 80;
+      listen 5173;
       server_name localhost;
 
       root /var/www/html;
@@ -97,5 +97,5 @@ EOF
 
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 80 8080
+EXPOSE 5173
 ENTRYPOINT ["/entrypoint.sh"]
