@@ -13,10 +13,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /area-bac
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 
-COPY external/Frontend/package.json external/Frontend/package-lock.json* ./
+COPY external/Frontend/package.json ./
 RUN npm install --no-audit --prefer-offline || npm install
 
-COPY external/Frontend .
+COPY external/Frontend/ .
 RUN npm run build
 
 FROM alpine:3.18 AS final
