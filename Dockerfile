@@ -10,7 +10,7 @@ RUN go env -w GOPROXY=https://proxy.golang.org,direct
 COPY external/Backend .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /area-backend ./src
 
-FROM node:20-alpine AS frontend-builder
+FROM node:25-alpine AS frontend-builder
 WORKDIR /app
 
 COPY external/Frontend/package.json ./
