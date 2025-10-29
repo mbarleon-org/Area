@@ -67,7 +67,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: SSH and deploy
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
