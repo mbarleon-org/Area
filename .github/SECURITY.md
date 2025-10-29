@@ -1,20 +1,5 @@
 # Security Policy
 
-Thank you for caring about security. If you've found a vulnerability in this project, please responsibly disclose it so we can fix it promptly.
-
-Preferred disclosure method
-
-- Email: mbarleon@mbarleon.com
-
-What to include
-
-- A clear description of the vulnerability and the affected component/path.
-- Steps to reproduce, minimal proof-of-concept, or example payloads.
-- Any potential impact and suggested mitigations.
-- Your contact details (email or alias) for follow-up.
-
-# Security Policy
-
 This repository cares about security. If you believe you've found a vulnerability, please report it so we can address it promptly and responsibly.
 
 Reporting
