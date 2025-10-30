@@ -16,7 +16,7 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
       - id: no-commit-to-branch
-        args: ['--branch, staging, --branch, main']
+        args: ['-b staging -b main']
       - id: forbid-new-submodules
       - id: check-yaml
       - id: trailing-whitespace
