@@ -1,0 +1,41 @@
+name: Delete head branch after PR merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  delete-head-branch:
+    if: ${{ github.event.pull_request.merged == true &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.event.pull_request.head.ref != 'main' &&
+            github.event.pull_request.head.ref != 'staging' }}
+    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    steps:
+      - name: Delete head branch via REST API
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headRef = github.context.payload.pull_request.head.ref;
+            const fullHeadRepo = github.context.payload.pull_request.head.repo.full_name;
+            core.info(`Attempting to delete branch '${headRef}' from ${fullHeadRepo}`);
+
+            const ref = `heads/${headRef}`;
+
+            try {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref
+              });
+              core.info(`Deleted branch: ${headRef}`);
+            } catch (err) {
+              core.warning(`Could not delete branch '${headRef}': ${err.message || err}`);
+              core.setFailed(err.message || String(err));
+            }
