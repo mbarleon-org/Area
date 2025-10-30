@@ -1,0 +1,58 @@
+name: Create PR from staging to main
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    steps:
+      - name: Create PR (staging -> main)
+        uses: actions/github-script@v8
+        with:
+          script: |
+            try {
+              const evt = (typeof context !== 'undefined' && context.eventName) ? context.eventName : (github.context && github.context.eventName) || process.env.GITHUB_EVENT_NAME;
+              const rawPayload = (typeof context !== 'undefined' && context.payload) ? context.payload : (github.context && github.context.payload) || {};
+              const payload = rawPayload.client_payload || rawPayload.inputs || {};
+
+              const title = payload.title || `chore(staging) Promote staging -> main (${new Date().toISOString().split('T')[0]})`;
+              const body  = payload.body  || '';
+              const head  = payload.head  || 'staging';
+              const base  = payload.base  || 'main';
+
+              const headQualifier = `${context.repo.owner}:${head}`;
+
+              const { data: existing } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                state: 'open',
+                head:  headQualifier,
+                base
+              });
+
+              if (existing && existing.length > 0) {
+                const pr = existing[0];
+                core.setOutput('pr_url', pr.html_url);
+                core.info(`Found existing PR: ${pr.html_url}`);
+                return;
+              }
+
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                title,
+                head,
+                base,
+                body
+              });
+
+              core.setOutput('pr_url', pr.html_url);
+              core.info(`Created PR: ${pr.html_url}`);
+            } catch (err) {
+              core.setFailed(err.message || String(err));
+            }

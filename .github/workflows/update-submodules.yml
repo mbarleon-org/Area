@@ -1,0 +1,67 @@
+name: Update submodules
+on:
+  workflow_call: {}
+  workflow_dispatch: {}
+
+jobs:
+  update-submodules:
+    runs-on: [self-hosted, Linux, X64, trusted, docker]
+
+    steps:
+      - name: Checkout super-repo with submodules
+        uses: actions/checkout@v5
+        with:
+          repository: mbarleon-org/Area
+          ref: staging
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.AREA_PUSH_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fast-forward submodules to tracked branches
+        id: fastforward
+        run: |
+          set -euo pipefail
+          git submodule foreach '
+            branch=$(git config -f $toplevel/.gitmodules submodule.$name.branch || echo main);
+            git fetch origin "$branch";
+            git checkout "$branch" || git switch -C "$branch";
+            git reset --hard "origin/$branch"
+          '
+          git add .
+          if git diff --cached --quiet; then
+            echo "no_changes=1" >> $GITHUB_OUTPUT
+          else
+            git commit -m "chore(submodules): bump to latest"
+            echo "no_changes=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push commit
+        if: ${{ steps.fastforward.outputs.no_changes != '1' }}
+        run: git push origin HEAD:refs/heads/staging
+        env:
+          GIT_ASKPASS: /bin/echo
+          GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
+
+      - name: SSH to staging server and update service
+        if: ${{ steps.fastforward.outputs.no_changes != '1' }}
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.AREA_STAGING_SSH_HOST }}
+          username: ${{ secrets.AREA_STAGING_SSH_USER }}
+          key: ${{ secrets.AREA_STAGING_SSH_KEY }}
+          port: ${{ secrets.AREA_STAGING_SSH_PORT }}
+          script: |
+            set -euo pipefail
+            cd "$STAGING_REPO_PATH"
+            docker compose down -v
+            git fetch origin staging
+            git checkout staging || git switch -C staging
+            git reset --hard origin/staging
+            docker compose up -d --build --force-recreate
+        env:
+          STAGING_REPO_PATH: ${{ secrets.AREA_STAGING_REPO_PATH }}
