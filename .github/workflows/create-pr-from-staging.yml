@@ -1,0 +1,35 @@
+name: Create PR from staging to main
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: write
+
+jobs:
+  create-pr:
+    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    steps:
+      - name: Create PR (staging -> main)
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const payload = (github.context.eventName === 'repository_dispatch')
+              ? github.context.payload.client_payload || {}
+              : (github.context.payload.inputs || {});
+
+            const title = payload.title || `chore(staging) Promote staging -> main (${new Date().toISOString().split('T')[0]})`;
+            const body = payload.body || '';
+            const head = payload.head || 'staging';
+            const base = payload.base || 'main';
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base,
+              body
+            });
+
+            core.setOutput('pr_url', pr.html_url);

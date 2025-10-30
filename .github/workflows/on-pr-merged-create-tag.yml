@@ -1,55 +1,33 @@
-name: Update submodules and tag
+name: Create tag when PR into main is merged
 on:
-  workflow_call: {}
-  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+    types: [closed]
 
 permissions:
   contents: write
 
 jobs:
-  update:
+  tag-on-merge:
+    if: ${{ github.event.pull_request.merged == true &&
+            github.event.pull_request.base.ref == 'main' &&
+            github.event.pull_request.head.ref == 'staging'
+        }}
     runs-on: [self-hosted, Linux, X64, trusted, docker]
-
     steps:
-      - name: Checkout super-repo with submodules
+      - name: Checkout main
         uses: actions/checkout@v5
         with:
-          repository: mbarleon-org/Area
+          repository: ${{ github.repository }}
           ref: main
           fetch-depth: 0
-          submodules: recursive
-          token: ${{ secrets.AREA_PUSH_TOKEN }}
 
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fast-forward submodules to tracked branches
-        run: |
-          set -euo pipefail
-          git submodule foreach '
-            branch=$(git config -f $toplevel/.gitmodules submodule.$name.branch || echo main);
-            git fetch origin "$branch";
-            git checkout "$branch" || git switch -C "$branch";
-            git reset --hard "origin/$branch"
-          '
-          git add .
-          if git diff --cached --quiet; then
-            echo "NO_CHANGES=1" >> $GITHUB_ENV
-          else
-            git commit -m "chore(submodules): bump to latest"
-          fi
-
-      - name: Push commit
-        if: env.NO_CHANGES != '1'
-        run: git push origin HEAD
-        env:
-          GIT_ASKPASS: /bin/echo
-          GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
-
       - name: Create and push next semver tag (patch)
-        if: env.NO_CHANGES != '1'
         run: |
           set -euo pipefail
           git fetch --tags origin
@@ -68,7 +46,7 @@ jobs:
           done
 
           echo "Tagging $NEXT"
-          git tag -a "$NEXT" -m "Submodules updated -> $NEXT"
+          git tag -a "$NEXT" -m "Release $NEXT"
           git push origin "$NEXT"
         env:
           GIT_ASKPASS: /bin/echo
