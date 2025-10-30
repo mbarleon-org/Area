@@ -62,4 +62,6 @@ jobs:
             git fetch origin staging
             git checkout staging || git switch -C staging
             git reset --hard origin/staging
+            git submodule sync --recursive
+            git submodule update --init --recursive
             docker compose up -d --build --force-recreate
