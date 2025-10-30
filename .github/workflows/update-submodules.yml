@@ -57,11 +57,11 @@ jobs:
           port: ${{ secrets.AREA_STAGING_SSH_PORT }}
           script: |
             set -euo pipefail
-            cd "$STAGING_REPO_PATH"
+            cd ${{ secrets.AREA_STAGING_REPO_PATH }}
             docker compose down -v
             git fetch origin staging
             git checkout staging || git switch -C staging
             git reset --hard origin/staging
+            git submodule sync --recursive
+            git submodule update --init --recursive
             docker compose up -d --build --force-recreate
-        env:
-          STAGING_REPO_PATH: ${{ secrets.AREA_STAGING_REPO_PATH }}
