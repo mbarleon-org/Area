@@ -18,16 +18,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pr = context.payload.pull_request;
+            const evtPayload = (typeof context !== 'undefined' && context.payload) ? context.payload : (github && github.context && github.context.payload) || {};
+            const pr = evtPayload.pull_request;
             if (!pr) {
-              core.info('No pull_request payload available, exiting.');
+              core.info('No pull_request payload available — exiting.');
               return;
             }
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = pr.number;
-            const headRef = pr.head.ref;
+            const headRef = pr.head && pr.head.ref;
 
             if (pr.state === 'closed') {
               core.info(`PR #${prNumber} is already closed.`);
@@ -39,7 +40,7 @@ jobs:
               '',
               'If you want to promote changes to main, please create or update the PR from the `staging` branch.',
               '',
-              `This automated action closed PR #${prNumber} which was opened from branch \`${headRef}\`.`
+              `This automated action closed PR #${prNumber} which was opened from branch \`${headRef || '<unknown>'}\`.`
             ].join('\n');
 
             try {
