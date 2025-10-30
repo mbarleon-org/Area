@@ -51,10 +51,10 @@ jobs:
         if: ${{ steps.fastforward.outputs.no_changes != '1' }}
         uses: appleboy/ssh-action@v1.2.2
         with:
-          host: ${{ secrets.STAGING_SSH_HOST }}
-          username: ${{ secrets.STAGING_SSH_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_SSH_PORT }}
+          host: ${{ secrets.AREA_STAGING_SSH_HOST }}
+          username: ${{ secrets.AREA_STAGING_SSH_USER }}
+          key: ${{ secrets.AREA_STAGING_SSH_KEY }}
+          port: ${{ secrets.AREA_STAGING_SSH_PORT }}
           script: |
             set -euo pipefail
             cd "$STAGING_REPO_PATH"
@@ -64,4 +64,4 @@ jobs:
             git reset --hard origin/staging
             docker compose up -d --build --force-recreate
         env:
-          STAGING_REPO_PATH: ${{ secrets.STAGING_REPO_PATH }}
+          STAGING_REPO_PATH: ${{ secrets.AREA_STAGING_REPO_PATH }}
