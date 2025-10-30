@@ -20,22 +20,29 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const evtPayload = (typeof context !== 'undefined' && context.payload) ? context.payload : (github && github.context && github.context.payload) || {};
+            const pr = evtPayload.pull_request;
+            if (!pr) {
+              core.info('No pull_request payload available — nothing to do.');
+              return;
+            }
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const headRef = github.context.payload.pull_request.head.ref;
-            const fullHeadRepo = github.context.payload.pull_request.head.repo.full_name;
+            const headRef = pr.head && pr.head.ref;
+            const fullHeadRepo = pr.head && pr.head.repo && pr.head.repo.full_name;
             core.info(`Attempting to delete branch '${headRef}' from ${fullHeadRepo}`);
+
+            if (!headRef) {
+              core.info('Head ref is not available — aborting.');
+              return;
+            }
 
             const ref = `heads/${headRef}`;
 
             try {
-              await github.rest.git.deleteRef({
-                owner,
-                repo,
-                ref
-              });
+              await github.rest.git.deleteRef({ owner, repo, ref });
               core.info(`Deleted branch: ${headRef}`);
             } catch (err) {
               core.warning(`Could not delete branch '${headRef}': ${err.message || err}`);
-              core.setFailed(err.message || String(err));
             }
