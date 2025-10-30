@@ -1,0 +1,52 @@
+name: Close PRs not from staging
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  close-invalid:
+    if: ${{ github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref != 'staging' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close PR and comment
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const evtPayload = (typeof context !== 'undefined' && context.payload) ? context.payload : (github && github.context && github.context.payload) || {};
+            const pr = evtPayload.pull_request;
+            if (!pr) {
+              core.info('No pull_request payload available — exiting.');
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = pr.number;
+            const headRef = pr.head && pr.head.ref;
+
+            if (pr.state === 'closed') {
+              core.info(`PR #${prNumber} is already closed.`);
+              return;
+            }
+
+            const message = [
+              'Closing this pull request because the repository expects changes to be proposed from the `staging` branch into `main`.',
+              '',
+              'If you want to promote changes to main, please create or update the PR from the `staging` branch.',
+              '',
+              `This automated action closed PR #${prNumber} which was opened from branch \`${headRef || '<unknown>'}\`.`
+            ].join('\n');
+
+            try {
+              await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: message });
+              await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+              core.info(`Closed PR #${prNumber} (head: ${headRef}).`);
+            } catch (err) {
+              core.warning(`Failed to close PR #${prNumber}: ${err.message || err}`);
+            }
