@@ -1,6 +1,3 @@
-ARG BUILD_DATE=unknown
-ARG VCS_REF=unknown
-
 FROM golang:1.25.3 AS backend-builder
 WORKDIR /src
 
@@ -20,6 +17,8 @@ COPY external/Frontend/ .
 RUN npm run build
 
 FROM alpine:3.22 AS final
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
 RUN apk add --no-cache nginx bash curl ca-certificates
 
 LABEL org.opencontainers.image.title="area" \
