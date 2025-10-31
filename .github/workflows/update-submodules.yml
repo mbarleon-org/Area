@@ -5,7 +5,7 @@ on:
 
 jobs:
   update-submodules:
-    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout super-repo with submodules
