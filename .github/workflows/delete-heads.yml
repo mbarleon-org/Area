@@ -13,7 +13,7 @@ jobs:
             github.event.pull_request.head.repo.full_name == github.repository &&
             github.event.pull_request.head.ref != 'main' &&
             github.event.pull_request.head.ref != 'staging' }}
-    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    runs-on: ubuntu-latest
     steps:
       - name: Delete head branch via REST API
         uses: actions/github-script@v8

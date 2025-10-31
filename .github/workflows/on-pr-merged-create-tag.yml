@@ -15,7 +15,7 @@ jobs:
             github.event.pull_request.base.ref == 'main' &&
             github.event.pull_request.head.ref == 'staging'
         }}
-    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout main
         uses: actions/checkout@v5
