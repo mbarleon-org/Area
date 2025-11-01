@@ -107,36 +107,47 @@ jobs:
           tags: ${{ steps.compute_tags.outputs.TAGS }}
           platforms: linux/amd64,linux/arm64
 
-      - name: Setup Cloudflare Tunnel for SSH
-        id: cloudflared
+      - name: Install cloudflared (single binary)
         run: |
-          set -eux
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
-          sudo dpkg -i /tmp/cloudflared.deb
+          set -euo pipefail
+          TMP_BIN=/tmp/cloudflared
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o "$TMP_BIN"
+          chmod +x "$TMP_BIN"
+          sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
+
+      - name: Start CF tunnel on random port
+        id: cf
+        run: |
+          set -euo pipefail
+          port=$(shuf -i 20000-30000 -n 1)
+          # try to avoid a port that's already listening (small chance)
+          for i in $(seq 1 40); do
+            if ss -lnt | awk '{print $4}' | grep -q ":$port$"; then
+              port=$(shuf -i 20000-30000 -n 1)
+              sleep 0.01
+            else
+              break
+            fi
+          done
 
           cloudflared access tcp \
             --hostname "${{ secrets.VM_HOST }}" \
-            --url 127.0.0.1:2222 \
+            --url 127.0.0.1:$port \
             --service-token-id "${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}" \
-            --service-token-secret "${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}" &
+            --service-token-secret "${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}" \
+            --log-level info &
+          echo $! > /tmp/cloudflared.pid
+          echo "port=$port" >> $GITHUB_OUTPUT
 
-          echo $! > /tmp/cloudflared_pid
-          echo "CLOUDFLARED_PID=$(cat /tmp/cloudflared_pid)" >> $GITHUB_ENV
-
-          for i in {1..20}; do
-            (echo > /dev/tcp/127.0.0.1/2222) >/dev/null 2>&1 && break
-            sleep 0.3
-          done
-
-          echo "Tunnel ready on localhost:2222"
+          for i in {1..40}; do (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1 && break; sleep 0.25; done
 
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: 127.0.0.1
+          port: ${{ steps.cf.outputs.port }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          port: 2222
           script: |
             set -euo pipefail
             cd ${{ secrets.VM_COMPOSE_PATH }}
@@ -147,6 +158,11 @@ jobs:
       - name: Cleanup Cloudflare tunnel
         if: always()
         run: |
-          if [ -f /tmp/cloudflared_pid ]; then
-            kill "$(cat /tmp/cloudflared_pid)" || true
+          set -euo pipefail
+          if [ -f /tmp/cloudflared.pid ]; then
+            kill "$(cat /tmp/cloudflared.pid)" || true
+            rm -f /tmp/cloudflared.pid || true
+          else
+            # fallback: try to kill any stray cloudflared process
+            pkill -f cloudflared || true
           fi
