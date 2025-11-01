@@ -56,30 +56,28 @@ jobs:
           chmod +x "$TMP_BIN"
           sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
 
-      - name: Configure SSH (use cloudflared as ProxyCommand)
-        if: ${{ steps.fastforward.outputs.no_changes != '1' }}
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.AREA_STAGING_SSH_KEY }}
-          name: id_ed25519
-          known_hosts: ${{ secrets.AREA_STAGING_SSH_KNOWN_HOSTS }}
-          config: |
-            Host ${{ secrets.AREA_STAGING_SSH_HOST }}
-              ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
-              IdentityFile ~/.ssh/id_ed25519
-
       - name: SSH to staging server and update service
         if: ${{ steps.fastforward.outputs.no_changes != '1' }}
         run: |
           set -euo pipefail
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.AREA_STAGING_SSH_USER }}" "${{ secrets.AREA_STAGING_SSH_HOST }}" /bin/bash <<'SSH'
-            set -euo pipefail
-            cd "${{ secrets.AREA_STAGING_REPO_PATH }}"
-            docker compose down -v
-            git fetch origin staging
-            git checkout staging || git switch -C staging
-            git reset --hard origin/staging
-            git submodule sync --recursive
-            git submodule update --init --recursive
-            docker compose up -d --build --force-recreate
-          SSH
+          ssh \
+            -o ProxyCommand="/usr/local/bin/cloudflared access ssh \
+              --hostname %h \
+              --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} \
+              --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} \
+              --destination ${{ secrets.AREA_STAGING_SSH_DEST }} \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -l "${{ secrets.AREA_STAGING_SSH_USER }}" \
+            ssh-area.mbarleon.com \
+            /bin/bash <<'SSH'
+              set -euo pipefail
+              cd "${{ secrets.AREA_STAGING_REPO_PATH }}"
+              docker compose down -v
+              git fetch origin staging
+              git checkout staging || git switch -C staging
+              git reset --hard origin/staging
+              git submodule sync --recursive
+              git submodule update --init --recursive
+              docker compose up -d --build --force-recreate
+            SSH
