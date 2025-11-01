@@ -107,16 +107,46 @@ jobs:
           tags: ${{ steps.compute_tags.outputs.TAGS }}
           platforms: linux/amd64,linux/arm64
 
+      - name: Setup Cloudflare Tunnel for SSH
+        id: cloudflared
+        run: |
+          set -eux
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+          sudo dpkg -i /tmp/cloudflared.deb
+
+          cloudflared access tcp \
+            --hostname "${{ secrets.VM_HOST }}" \
+            --url 127.0.0.1:2222 \
+            --service-token-id "${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}" \
+            --service-token-secret "${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}" &
+
+          echo $! > /tmp/cloudflared_pid
+          echo "CLOUDFLARED_PID=$(cat /tmp/cloudflared_pid)" >> $GITHUB_ENV
+
+          for i in {1..20}; do
+            (echo > /dev/tcp/127.0.0.1/2222) >/dev/null 2>&1 && break
+            sleep 0.3
+          done
+
+          echo "Tunnel ready on localhost:2222"
+
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1.2.2
         with:
-          host: ${{ secrets.VM_HOST }}
+          host: 127.0.0.1
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          port: ${{ secrets.VM_SSH_PORT }}
+          port: 2222
           script: |
             set -euo pipefail
             cd ${{ secrets.VM_COMPOSE_PATH }}
             docker compose down -v
             docker compose pull
             docker compose up -d
+
+      - name: Cleanup Cloudflare tunnel
+        if: always()
+        run: |
+          if [ -f /tmp/cloudflared_pid ]; then
+            kill "$(cat /tmp/cloudflared_pid)" || true
+          fi
