@@ -120,6 +120,7 @@ jobs:
         with:
           key: ${{ secrets.VM_SSH_KEY }}
           name: id_ed25519
+          known_hosts: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
           config: |
             Host ${{ secrets.VM_HOST }}
               ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
