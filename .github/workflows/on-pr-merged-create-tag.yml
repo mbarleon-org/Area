@@ -123,7 +123,7 @@ jobs:
           known_hosts: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
           config: |
             Host ${{ secrets.VM_HOST }}
-              ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} --log-level debug --logfile /tmp/cloudflared.log
+              ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} --destination ${{ secrets.VM_SSH_DEST }} --log-level debug --logfile /tmp/cloudflared.log
               IdentityFile ~/.ssh/id_ed25519
 
       - name: SSH and deploy
