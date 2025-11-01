@@ -72,7 +72,7 @@ jobs:
         if: ${{ steps.fastforward.outputs.no_changes != '1' }}
         run: |
           set -euo pipefail
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.AREA_STAGING_SSH_USER }}" "${{ secrets.AREA_STAGING_SSH_HOST }}" <<'SSH'
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.AREA_STAGING_SSH_USER }}" "${{ secrets.AREA_STAGING_SSH_HOST }}" /bin/bash <<'SSH'
             set -euo pipefail
             cd "${{ secrets.AREA_STAGING_REPO_PATH }}"
             docker compose down -v
