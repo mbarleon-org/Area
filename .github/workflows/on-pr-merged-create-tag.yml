@@ -115,71 +115,23 @@ jobs:
           chmod +x "$TMP_BIN"
           sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
 
-      - name: Start CF tunnel on random port
-        id: cf
-        run: |
-          set -euo pipefail
-          LOG=/tmp/cloudflared.log
-          rm -f "$LOG"
-
-          preferred_port=$(shuf -i 20000-30000 -n 1)
-
-          cloudflared access tcp \
-            --hostname "${{ secrets.VM_HOST }}" \
-            --url 127.0.0.1:$preferred_port \
-            --service-token-id "${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}" \
-            --service-token-secret "${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}" \
-            --log-level info > "$LOG" 2>&1 &
-          echo $! > /tmp/cloudflared.pid
-
-          actual_port=""
-          for i in {1..40}; do
-            if grep -oP 'Start Websocket listener host=127\.0\.0\.1:\K[0-9]+' "$LOG" >/dev/null 2>&1; then
-              actual_port=$(grep -oP 'Start Websocket listener host=127\.0\.0\.1:\K[0-9]+' "$LOG" | tail -n1)
-              break
-            fi
-            if grep -oP 'Listening on 127\.0\.0\.1:\K[0-9]+' "$LOG" >/dev/null 2>&1; then
-              actual_port=$(grep -oP 'Listening on 127\.0\.0\.1:\K[0-9]+' "$LOG" | tail -n1)
-              break
-            fi
-            sleep 0.25
-          done
-
-          if [ -z "$actual_port" ]; then
-            echo "ERROR: failed to detect cloudflared local listener port. Dumping last 200 lines of log:" >&2
-            tail -n 200 "$LOG" >&2 || true
-            # also print the preferred port so logs show what we asked for
-            echo "preferred_port=$preferred_port" >&2
-            exit 1
-          fi
-
-          echo "Detected cloudflared listener port: $actual_port"
-          echo "port=$actual_port" >> $GITHUB_OUTPUT
-
-          for i in {1..40}; do (echo > /dev/tcp/127.0.0.1/$actual_port) >/dev/null 2>&1 && break; sleep 0.25; done
+      - name: Configure SSH (use cloudflared as ProxyCommand)
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.VM_SSH_KEY }}
+          name: id_ed25519
+          config: |
+            Host ${{ secrets.VM_HOST }}
+              ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
+              IdentityFile ~/.ssh/id_ed25519
 
       - name: SSH and deploy
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: 127.0.0.1
-          port: ${{ steps.cf.outputs.port }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.VM_USER }}" "${{ secrets.VM_HOST }}" <<'SSH'
             set -euo pipefail
-            cd ${{ secrets.VM_COMPOSE_PATH }}
+            cd "${{ secrets.VM_COMPOSE_PATH }}"
             docker compose down -v
             docker compose pull
             docker compose up -d
-
-      - name: Cleanup Cloudflare tunnel
-        if: always()
-        run: |
-          set -euo pipefail
-          if [ -f /tmp/cloudflared.pid ]; then
-            kill "$(cat /tmp/cloudflared.pid)" || true
-            rm -f /tmp/cloudflared.pid || true
-          else
-            # fallback: try to kill any stray cloudflared process
-            pkill -f cloudflared || true
-          fi
+          SSH
