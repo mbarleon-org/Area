@@ -123,7 +123,7 @@ jobs:
               --hostname %h \
               --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} \
               --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} \
-              --destination ${{ secrets.VM_SSH_DEST }} \
+              --destination ${{ secrets.VM_SSH_DEST }}" \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -l "${{ secrets.VM_USER }}" \
