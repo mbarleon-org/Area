@@ -129,7 +129,7 @@ jobs:
       - name: SSH and deploy
         run: |
           set -euo pipefail
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.VM_USER }}" "${{ secrets.VM_HOST }}" <<'SSH'
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${{ secrets.VM_USER }}" "${{ secrets.VM_HOST }}" /bin/bash <<'SSH'
             set -euo pipefail
             cd "${{ secrets.VM_COMPOSE_PATH }}"
             docker compose down -v
