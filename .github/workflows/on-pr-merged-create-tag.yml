@@ -120,16 +120,19 @@ jobs:
           set -euo pipefail
 
           /usr/local/bin/cloudflared access tcp \
-            --hostname "ssh-area.mbarleon.com" \
+            --hostname "${{ secrets.VM_HOST }}" \
             --url 127.0.0.1:2222 \
             --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} \
             --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} \
             --log-level info &
           echo $! > /tmp/cloudflared.pid
 
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/id_rsa
+          chmod 600 ~/id_rsa
+
           for i in {1..40}; do (echo > /dev/tcp/127.0.0.1/2222) >/dev/null 2>&1 && break; sleep 0.25; done
 
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 -l "${{ secrets.VM_USER }}" "127.0.0.1" /bin/bash <<'SSH'
+          ssh -i ~/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 -l "${{ secrets.VM_USER }}" "127.0.0.1" /bin/bash <<'SSH'
             set -euo pipefail
             cd "${{ secrets.VM_COMPOSE_PATH }}"
             docker compose down -v
@@ -137,4 +140,8 @@ jobs:
             docker compose up -d
           SSH
 
+      - name: Delete key and kill cloudflared
+        if: always()
+        run: |
           [ -f /tmp/cloudflared.pid ] && kill "$(cat /tmp/cloudflared.pid)" || true
+          [ -f ~/id_rsa ] && rm -f ~/if_rsa || true
