@@ -115,24 +115,30 @@ jobs:
           chmod +x "$TMP_BIN"
           sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
 
-      - name: SSH and deploy
+      - name: Configure SSH key and known_hosts
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.VM_SSH_KEY }}
+          name: id_ed25519
+          known_hosts: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
+
+      - name: SSH and deploy (via per-connection cloudflared ProxyCommand)
+        env:
+          CF_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
+          VM_DEST: ${{ secrets.VM_SSH_DEST }}
         run: |
           set -euo pipefail
-
-          /usr/local/bin/cloudflared access tcp \
-            --hostname "${{ secrets.VM_HOST }}" \
-            --url 127.0.0.1:2222 \
-            --service-token-id ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }} \
-            --service-token-secret ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }} \
-            --log-level info &
-          echo $! > /tmp/cloudflared.pid
-
-          echo "${{ secrets.VM_SSH_KEY }}" > ~/id_rsa
-          chmod 600 ~/id_rsa
-
-          for i in {1..40}; do (echo > /dev/tcp/127.0.0.1/2222) >/dev/null 2>&1 && break; sleep 0.25; done
-
-          ssh -i ~/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 -l "${{ secrets.VM_USER }}" "127.0.0.1" /bin/bash <<'SSH'
+          timeout 120 ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            -o ProxyCommand="/usr/local/bin/cloudflared access ssh --hostname %h --service-token-id $CF_ID --service-token-secret $CF_SECRET --destination $VM_DEST --log-level info" \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -l "${{ secrets.VM_USER }}" \
+            "${{ secrets.VM_HOST }}" \
+            /bin/bash <<'SSH'
             set -euo pipefail
             cd "${{ secrets.VM_COMPOSE_PATH }}"
             docker compose down -v
@@ -140,8 +146,7 @@ jobs:
             docker compose up -d
           SSH
 
-      - name: Delete key and kill cloudflared
+      - name: Delete temporary key
         if: always()
         run: |
-          [ -f /tmp/cloudflared.pid ] && kill "$(cat /tmp/cloudflared.pid)" || true
-          [ -f ~/id_rsa ] && rm -f ~/if_rsa || true
+          [ -f ~/.ssh/id_ed25519 ] && shred -u ~/.ssh/id_ed25519 || true
