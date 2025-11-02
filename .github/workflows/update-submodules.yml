@@ -71,7 +71,6 @@ jobs:
           VM_USER: ${{ secrets.AREA_STAGING_SSH_USER }}
           VM_DEST: ${{ secrets.AREA_STAGING_SSH_DEST }}
           CF_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
-          VM_SSH_KEY_B64: ${{ secrets.AREA_STAGING_SSH_KEY }}
           CF_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
           VM_COMPOSE_PATH: ${{ secrets.AREA_STAGING_REPO_PATH }}
           VM_SSH_KNOWN_HOSTS: ${{ secrets.AREA_STAGING_SSH_KNOWN_HOSTS }}
@@ -79,7 +78,7 @@ jobs:
           set -euo pipefail
 
           mkdir -p ~/.ssh
-          echo "$VM_SSH_KEY_B64" | base64 -d > ~/.ssh/id_rsa
+          printf '%s\n' "${{ secrets.AREA_STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           if [ -n "${VM_SSH_KNOWN_HOSTS:-}" ]; then
             printf '%s\n' "$VM_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
