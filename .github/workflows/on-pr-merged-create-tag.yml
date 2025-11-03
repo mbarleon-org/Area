@@ -107,47 +107,33 @@ jobs:
           tags: ${{ steps.compute_tags.outputs.TAGS }}
           platforms: linux/amd64,linux/arm64
 
-      - name: Install cloudflared (single binary)
-        run: |
-          set -euo pipefail
-          TMP_BIN=/tmp/cloudflared
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o "$TMP_BIN"
-          chmod +x "$TMP_BIN"
-          sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
+      - name: connect to warp
+        uses: Boostport/setup-cloudflare-warp@v1
+        with:
+          organization: ${{ secrets.AREA_CF_ORG }}
+          auth_client_id: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
+          auth_client_secret: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
 
       - name: SSH and deploy (via per-connection cloudflared ProxyCommand)
         env:
-          VM_HOST: ${{ secrets.VM_HOST }}
           VM_USER: ${{ secrets.VM_USER }}
           VM_DEST: ${{ secrets.VM_SSH_DEST }}
-          CF_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
           VM_COMPOSE_PATH: ${{ secrets.VM_COMPOSE_PATH }}
-          VM_SSH_KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
-          CF_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
         run: |
           set -euo pipefail
 
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          if [ -n "${VM_SSH_KNOWN_HOSTS:-}" ]; then
-            printf '%s\n' "$VM_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-            chmod 644 ~/.ssh/known_hosts
-          fi
 
           timeout 120 ssh \
             -i ~/.ssh/id_rsa \
             -o BatchMode=yes \
             -o ConnectTimeout=30 \
-            -o ProxyCommand="/usr/local/bin/cloudflared access ssh \
-              --hostname %h \
-              --service-token-id $CF_ID \
-              --service-token-secret $CF_SECRET \
-              --destination $VM_DEST" \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -l "$VM_USER" \
-            "$VM_HOST" \
+            "$VM_DEST" \
             /bin/bash <<'SSH'
               set -euo pipefail
               cd "$VM_COMPOSE_PATH"
