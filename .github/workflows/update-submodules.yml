@@ -75,11 +75,8 @@ jobs:
       - name: Start WARP service and connect
         run: |
           sudo systemctl restart warp-svc || sudo service warp-svc restart
-          warp-cli --accept-tos true || true
-          warp-cli status || true
           sleep 2
-          warp-cli connect || true
-          warp-cli status || true
+          warp-cli --accept-tos connect || true
 
       - name: SSH to staging server and update service
         if: ${{ steps.fastforward.outputs.no_changes != '1' }}
