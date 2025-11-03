@@ -47,57 +47,34 @@ jobs:
           GIT_ASKPASS: /bin/echo
           GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
 
-      - name: Install cloudflared (single binary)
-        if: ${{ steps.fastforward.outputs.no_changes != '1' }}
-        run: |
-          set -euo pipefail
-          TMP_BIN=/tmp/cloudflared
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o "$TMP_BIN"
-          chmod +x "$TMP_BIN"
-          sudo mv "$TMP_BIN" /usr/local/bin/cloudflared
-
-      - name: Configure SSH key and known_hosts for staging
-        if: ${{ steps.fastforward.outputs.no_changes != '1' }}
-        uses: shimataro/ssh-key-action@v2
+      - name: connect to warp
+        uses: Boostport/setup-cloudflare-warp@v1
         with:
-          key: ${{ secrets.AREA_STAGING_SSH_KEY }}
-          name: id_ed25519
-          known_hosts: ${{ secrets.AREA_STAGING_SSH_KNOWN_HOSTS }}
+          organization: ${{ secrets.AREA_CF_ORG }}
+          auth_client_id: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
+          auth_client_secret: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
 
       - name: SSH to staging server and update service
         if: ${{ steps.fastforward.outputs.no_changes != '1' }}
         env:
-          VM_HOST: ${{ secrets.AREA_STAGING_SSH_HOST }}
           VM_USER: ${{ secrets.AREA_STAGING_SSH_USER }}
           VM_DEST: ${{ secrets.AREA_STAGING_SSH_DEST }}
-          CF_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
-          CF_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
           VM_COMPOSE_PATH: ${{ secrets.AREA_STAGING_REPO_PATH }}
-          VM_SSH_KNOWN_HOSTS: ${{ secrets.AREA_STAGING_SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
 
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.AREA_STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          if [ -n "${VM_SSH_KNOWN_HOSTS:-}" ]; then
-            printf '%s\n' "$VM_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-            chmod 644 ~/.ssh/known_hosts
-          fi
 
           timeout 120 ssh \
             -i ~/.ssh/id_rsa \
             -o BatchMode=yes \
             -o ConnectTimeout=30 \
-            -o ProxyCommand="/usr/local/bin/cloudflared access ssh \
-              --hostname %h \
-              --service-token-id $CF_ID \
-              --service-token-secret $CF_SECRET \
-              --destination $VM_DEST" \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
             -l "$VM_USER" \
-            "$VM_HOST" \
+            "$VM_DEST" \
             /bin/bash <<'SSH'
               set -euo pipefail
               cd "$VM_COMPOSE_PATH"
