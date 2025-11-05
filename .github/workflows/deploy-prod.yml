@@ -1,0 +1,86 @@
+name: Deploy prod
+on:
+  workflow_call:
+    secrets:
+      VM_USER:
+        required: true
+      VM_SSH_DEST:
+        required: true
+      VM_COMPOSE_PATH:
+        required: true
+      VM_SSH_KEY:
+        required: true
+      AREA_CF_ORG:
+        required: true
+      AREA_CF_ACCESS_CLIENT_ID:
+        required: true
+      AREA_CF_ACCESS_CLIENT_SECRET:
+        required: true
+
+jobs:
+  deploy-prod:
+    runs-on: [self-hosted, Linux, X64, trusted, docker]
+    steps:
+      - name: Install Cloudflare WARP (headless)
+        run: |
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update
+          sudo apt-get install -y cloudflare-warp
+
+      - name: Configure MDM (service-token enrollment)
+        env:
+          ORG: ${{ secrets.AREA_CF_ORG }}
+          CLIENT_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          sudo install -d -m 755 /var/lib/cloudflare-warp
+          sudo tee /var/lib/cloudflare-warp/mdm.xml >/dev/null <<EOF
+          <dict>
+            <key>organization</key><string>${ORG}</string>
+            <key>auth_client_id</key><string>${CLIENT_ID}</string>
+            <key>auth_client_secret</key><string>${CLIENT_SECRET}</string>
+            <key>service_mode</key><string>warp</string>
+            <key>auto_connect</key><integer>1</integer>
+            <key>onboarding</key><false/>
+          </dict>
+          EOF
+
+      - name: Start WARP service and connect
+        run: |
+          sudo systemctl restart warp-svc || sudo service warp-svc restart
+          sleep 2
+          warp-cli --accept-tos connect || true
+
+      - name: SSH and deploy (via per-connection cloudflared ProxyCommand)
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_DEST: ${{ secrets.VM_SSH_DEST }}
+          VM_COMPOSE_PATH: ${{ secrets.VM_COMPOSE_PATH }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          timeout 120 ssh \
+            -i ~/.ssh/id_rsa \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -l "$VM_USER" \
+            "$VM_DEST" \
+            /bin/bash <<'SSH'
+              set -euo pipefail
+              cd "$VM_COMPOSE_PATH"
+              docker compose down -v
+              docker compose pull
+              docker compose up -d
+          SSH
+
+      - name: Delete temporary key
+        if: always()
+        run: |
+          [ -f ~/.ssh/id_rsa ] && shred -u ~/.ssh/id_rsa || true
