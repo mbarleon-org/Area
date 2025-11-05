@@ -23,10 +23,10 @@ jobs:
     steps:
       - name: Install Cloudflare WARP (headless)
         run: |
-          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-          sudo apt-get update
-          sudo apt-get install -y cloudflare-warp
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflare-client.list
+          apt-get update
+          apt-get install -y cloudflare-warp
 
       - name: Configure MDM (service-token enrollment)
         env:
@@ -34,8 +34,8 @@ jobs:
           CLIENT_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
         run: |
-          sudo install -d -m 755 /var/lib/cloudflare-warp
-          sudo tee /var/lib/cloudflare-warp/mdm.xml >/dev/null <<EOF
+          install -d -m 755 /var/lib/cloudflare-warp
+          tee /var/lib/cloudflare-warp/mdm.xml >/dev/null <<EOF
           <dict>
             <key>organization</key><string>${ORG}</string>
             <key>auth_client_id</key><string>${CLIENT_ID}</string>
@@ -48,7 +48,7 @@ jobs:
 
       - name: Start WARP service and connect
         run: |
-          sudo systemctl restart warp-svc || sudo service warp-svc restart
+          systemctl restart warp-svc || service warp-svc restart
           sleep 2
           warp-cli --accept-tos connect || true
 
