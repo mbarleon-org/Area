@@ -116,5 +116,3 @@ jobs:
       VM_COMPOSE_PATH: ${{ secrets.VM_COMPOSE_PATH }}
       VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
       AREA_CF_ORG: ${{ secrets.AREA_CF_ORG }}
-      AREA_CF_ACCESS_CLIENT_ID: ${{ secrets.AREA_CF_ACCESS_CLIENT_ID }}
-      AREA_CF_ACCESS_CLIENT_SECRET: ${{ secrets.AREA_CF_ACCESS_CLIENT_SECRET }}
