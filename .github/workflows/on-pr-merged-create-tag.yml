@@ -112,7 +112,6 @@ jobs:
     uses: ./.github/workflows/deploy-prod.yml
     secrets:
       VM_USER: ${{ secrets.VM_USER }}
+      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
       VM_SSH_DEST: ${{ secrets.VM_SSH_DEST }}
       VM_COMPOSE_PATH: ${{ secrets.VM_COMPOSE_PATH }}
-      VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
-      AREA_CF_ORG: ${{ secrets.AREA_CF_ORG }}

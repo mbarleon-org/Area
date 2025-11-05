@@ -51,7 +51,6 @@ jobs:
     needs: update-submodules
     uses: ./.github/workflows/deploy-staging.yml
     secrets:
-      AREA_CF_ORG: ${{ secrets.AREA_CF_ORG }}
       AREA_STAGING_SSH_KEY: ${{ secrets.AREA_STAGING_SSH_KEY }}
       AREA_STAGING_SSH_USER: ${{ secrets.AREA_STAGING_SSH_USER }}
       AREA_STAGING_SSH_DEST: ${{ secrets.AREA_STAGING_SSH_DEST }}

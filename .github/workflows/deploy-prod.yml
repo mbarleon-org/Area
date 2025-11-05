@@ -10,18 +10,12 @@ on:
         required: true
       VM_SSH_KEY:
         required: true
-      AREA_CF_ORG:
-        required: true
 
 jobs:
   deploy-prod:
     runs-on: [self-hosted, Linux, X64, trusted, docker]
     steps:
       - name: SSH and deploy
-        env:
-          VM_USER: ${{ secrets.VM_USER }}
-          VM_DEST: ${{ secrets.VM_SSH_DEST }}
-          VM_COMPOSE_PATH: ${{ secrets.VM_COMPOSE_PATH }}
         run: |
           set -euo pipefail
 
@@ -35,11 +29,11 @@ jobs:
             -o ConnectTimeout=30 \
             -o StrictHostKeyChecking=no \
             -o UserKnownHostsFile=/dev/null \
-            -l "$VM_USER" \
-            "$VM_DEST" \
+            -l "${{ secrets.VM_USER }}" \
+            "${{ secrets.VM_SSH_DEST }}" \
             /bin/bash <<'SSH'
               set -euo pipefail
-              cd "$VM_COMPOSE_PATH"
+              cd "${{ secrets.VM_COMPOSE_PATH }}"
               docker compose down -v
               docker compose pull
               docker compose up -d
