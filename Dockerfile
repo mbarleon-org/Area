@@ -1,4 +1,4 @@
-FROM golang:1.25.3 AS backend-builder
+FROM golang:1.25.4 AS backend-builder
 WORKDIR /src
 
 COPY external/Backend/go.mod ./
