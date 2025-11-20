@@ -1,16 +1,16 @@
-FROM golang:1.25.3 AS backend-builder
-WORKDIR /src
+FROM node:25-alpine AS backend-builder
+WORKDIR /app
 
-COPY external/Backend/go.mod ./
-RUN go env -w GOPROXY=https://proxy.golang.org,direct
+COPY external/Backend/package.json external/Backend/package-lock.json ./
+RUN npm install --no-audit --prefer-offline || npm install
 
-COPY external/Backend .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /area-backend ./src
+COPY external/Backend/ .
+RUN npm run build
 
 FROM node:25-alpine AS frontend-builder
 WORKDIR /app
 
-COPY external/Frontend/package.json ./
+COPY external/Frontend/package.json external/Frontend/package-lock.json ./
 RUN npm install --no-audit --prefer-offline || npm install
 
 COPY external/Frontend/ .
@@ -29,8 +29,9 @@ LABEL org.opencontainers.image.title="area" \
    org.opencontainers.image.revision="${VCS_REF}"
 
 COPY --from=frontend-builder /app/dist /var/www/html
-COPY --from=backend-builder /area-backend /area-backend
-RUN chmod +x /area-backend
+COPY --from=backend-builder /app/dist /area-backend/dist
+COPY --from=backend-builder /app/package.json /area-backend/package.json
+COPY --from=backend-builder /app/node_modules /area-backend/node_modules
 
 RUN cat > /etc/nginx/nginx.conf <<'EOF'
 user nginx;
@@ -56,7 +57,7 @@ http {
       index index.html;
 
       location /api/ {
-         proxy_pass http://127.0.0.1:8080/;
+         proxy_pass http://127.0.0.1:3000/;
          proxy_set_header Host $host;
          proxy_set_header X-Real-IP $remote_addr;
          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -75,7 +76,7 @@ RUN cat > /entrypoint.sh <<'EOF'
 set -e
 
 start_backend() {
-   /area-backend &
+   node dist/index.js &
    echo "started backend pid $!"
    backend_pid=$!
 }
