@@ -19,7 +19,7 @@ RUN npm run build
 FROM alpine:3.22 AS final
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
-RUN apk add --no-cache nginx bash curl ca-certificates
+RUN apk add --no-cache nginx bash curl ca-certificates nodejs npm
 
 LABEL org.opencontainers.image.title="area" \
    org.opencontainers.image.description="Area project" \
@@ -57,7 +57,7 @@ http {
       index index.html;
 
       location /api/ {
-         proxy_pass http://127.0.0.1:3000/;
+         proxy_pass http://127.0.0.1:3000/api/;
          proxy_set_header Host $host;
          proxy_set_header X-Real-IP $remote_addr;
          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -76,7 +76,7 @@ RUN cat > /entrypoint.sh <<'EOF'
 set -e
 
 start_backend() {
-   node dist/index.js &
+   node /area-backend/dist/index.js &
    echo "started backend pid $!"
    backend_pid=$!
 }
