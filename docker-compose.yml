@@ -3,7 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: area-pg
     environment:
-      POSTGRES_PASSWORD: area
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_USER: area
       POSTGRES_DB: area
     ports:
@@ -40,7 +40,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://area:area@postgres:5432/area
+      DATABASE_URL: postgres://area:${PG_PASSWORD}@postgres:5432/area
       REDIS_URL: redis://redis:6379
       RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET}
       PUBLIC_URL: http://area:3000
