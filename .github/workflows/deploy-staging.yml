@@ -10,6 +10,7 @@ on:
         required: true
       AREA_STAGING_REPO_PATH:
         required: true
+  workflow_dispatch: {}
 
 jobs:
   deploy-staging:

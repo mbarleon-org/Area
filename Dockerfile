@@ -19,7 +19,8 @@ RUN npm run build
 FROM alpine:3.22 AS final
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
-RUN apk add --no-cache nginx bash curl ca-certificates nodejs npm
+
+RUN apk add --no-cache nginx bash curl ca-certificates nodejs npm postgresql postgresql-client openssl
 
 LABEL org.opencontainers.image.title="area" \
    org.opencontainers.image.description="Area project" \
@@ -33,84 +34,9 @@ COPY --from=backend-builder /app/dist /area-backend/dist
 COPY --from=backend-builder /app/package.json /area-backend/package.json
 COPY --from=backend-builder /app/node_modules /area-backend/node_modules
 
-RUN cat > /etc/nginx/nginx.conf <<'EOF'
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-events {
-   worker_connections 1024;
-}
-
-http {
-   include /etc/nginx/mime.types;
-   default_type application/octet-stream;
-   sendfile on;
-   keepalive_timeout 65;
-
-   server {
-      listen 5173;
-      server_name localhost;
-
-      root /var/www/html;
-      index index.html;
-
-      location /api/ {
-         proxy_pass http://127.0.0.1:3000/api/;
-         proxy_set_header Host $host;
-         proxy_set_header X-Real-IP $remote_addr;
-         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-         proxy_set_header X-Forwarded-Proto $scheme;
-      }
-
-      location /webhook/ {
-         proxy_pass http://127.0.0.1:3000/webhook/;
-         proxy_set_header Host $host;
-         proxy_set_header X-Real-IP $remote_addr;
-         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-         proxy_set_header X-Forwarded-Proto $scheme;
-      }
-
-      location /ws/ {
-         proxy_pass http://127.0.0.1:3000/ws/;
-         proxy_set_header Host $host;
-         proxy_set_header X-Real-IP $remote_addr;
-         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-         proxy_set_header X-Forwarded-Proto $scheme;
-      }
-
-      location / {
-         try_files $uri $uri/ /index.html;
-      }
-   }
-}
-EOF
-
-RUN cat > /entrypoint.sh <<'EOF'
-#!/bin/sh
-set -e
-
-start_backend() {
-   node /area-backend/dist/index.js &
-   echo "started backend pid $!"
-   backend_pid=$!
-}
-
-stop() {
-   echo "stopping..."
-   [ -n "$backend_pid" ] && kill -TERM "$backend_pid" 2>/dev/null || true
-   exit 0
-}
-
-trap stop TERM INT
-
-start_backend
-
-nginx -g 'daemon off;'
-
-EOF
-
+COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 5173
