@@ -6,3 +6,7 @@
 	path = external/Frontend
 	url = https://github.com/mbarleon-org/Area-Frontend.git
 	branch = main
+[submodule "external/Worker"]
+	path = external/Worker
+	url = https://github.com/mbarleon-org/Area-Worker.git
+	branch = main
