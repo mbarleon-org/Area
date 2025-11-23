@@ -1,0 +1,7 @@
+services:
+  area:
+    image: ghcr.io/mbarleon-org/area
+    environment:
+      AREA_ENCRYPTION_KEY: ${AREA_ENCRYPTION_KEY}
+    ports:
+      - "5173:5173"
