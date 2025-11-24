@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
           ref: main
@@ -57,7 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.AREA_PUSH_TOKEN }}
 
       - name: Checkout the created tag
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.create_tag.outputs.TAG }}
           fetch-depth: 0

@@ -9,7 +9,7 @@ jobs:
 
     steps:
       - name: Checkout super-repo with submodules
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: mbarleon-org/Area
           ref: staging
