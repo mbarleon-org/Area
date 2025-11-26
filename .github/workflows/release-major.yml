@@ -23,7 +23,7 @@ jobs:
             image: area-frontend
     steps:
       - name: Checkout super-repo with submodules
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ matrix.repo }}
           ref: main
@@ -62,11 +62,13 @@ jobs:
           exit 0
 
       - name: Checkout the created tag
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ steps.create_tag.outputs.TAG }}
+          repository: ${{ matrix.repo }}
           fetch-depth: 0
-          submodules: true
+          submodules: recursive
+          token: ${{ secrets.AREA_PUSH_TOKEN }}
 
       - name: Set VCS_REF from checked-out repo
         id: vcs_ref
