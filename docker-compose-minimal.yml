@@ -1,6 +1,6 @@
 services:
   area:
-    image: ghcr.io/mbarleon-org/area:latest
+    image: mbarleon/area:latest
     environment:
       AREA_ENCRYPTION_KEY: ${AREA_ENCRYPTION_KEY}
     ports:
