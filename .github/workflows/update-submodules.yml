@@ -26,6 +26,8 @@ jobs:
         id: fastforward
         run: |
           set -euo pipefail
+          git fetch origin main
+          git merge --ff-only origin/main || true
           git submodule foreach '
             branch=$(git config -f $toplevel/.gitmodules submodule.$name.branch || echo main);
             git fetch origin "$branch";
