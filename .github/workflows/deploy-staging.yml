@@ -41,7 +41,8 @@ jobs:
               git reset --hard origin/staging
               git submodule sync --recursive
               git submodule update --init --recursive
-              docker compose --env-file ../App/.env up -d --build --force-recreate
+              docker compose build --no-cache
+              docker compose --env-file ../App/.env up -d --force-recreate
           SSH
 
       - name: Delete temporary key
