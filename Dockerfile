@@ -30,6 +30,7 @@ LABEL org.opencontainers.image.title="area" \
    org.opencontainers.image.revision="${VCS_REF}"
 
 COPY --from=frontend-builder /app/dist /var/www/html
+COPY --from=backend-builder /app/docs /area-backend/docs
 COPY --from=backend-builder /app/dist /area-backend/dist
 COPY --from=backend-builder /app/package.json /area-backend/package.json
 COPY --from=backend-builder /app/node_modules /area-backend/node_modules

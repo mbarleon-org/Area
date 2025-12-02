@@ -52,6 +52,12 @@ services:
       LEGACY_CREDENTIALS_DIR: /app/legacy_credentials
       USE_RUNNERS: "true"
       AREA_ENCRYPTION_KEY: ${AREA_ENCRYPTION_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL}
     ports:
       - "5173:5173"
     volumes:
@@ -82,6 +88,7 @@ services:
       # KUBECONFIG: /root/.kube/config
     # volumes:
     #   - ~/.kube/config.docker:/root/.kube/config:ro
+
     networks:
       - area-dev
       # - kind
