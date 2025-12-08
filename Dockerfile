@@ -23,7 +23,7 @@ COPY external/Frontend/ .
 RUN EXPO_NO_TELEMETRY=1 npx expo export --platform web --output-dir dist && \
     node -e 'const fs=require("fs");const file="/app/dist/index.html";const tag="<script src=\"/runtime-env.js\"></script>";const html=fs.readFileSync(file,"utf8");if(html.includes(tag)){process.exit(0);}if(!html.includes("</head>")){throw new Error("Unable to find </head> marker in index.html when injecting runtime env script.");}const updated=html.replace("</head>",tag + "\n</head>");fs.writeFileSync(file,updated);'
 
-FROM alpine:3.22 AS final
+FROM alpine:3.23 AS final
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 
