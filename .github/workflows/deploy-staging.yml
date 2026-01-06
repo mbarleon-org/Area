@@ -24,7 +24,7 @@ jobs:
           printf '%s\n' "${{ secrets.AREA_STAGING_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          timeout 120 ssh \
+          timeout 1200 ssh \
             -i ~/.ssh/id_rsa \
             -o BatchMode=yes \
             -o ConnectTimeout=30 \
